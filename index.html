@@ -1,0 +1,1184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Time Complexity Analyzer</title>
+<meta name="description" content="Rule-based time complexity analyzer and live performance test for a DAA course project.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    color-scheme: dark;
+    --bg: #0d0f13;
+    --surface: #161920;
+    --surface-2: #1d2029;
+    --inset: #111319;
+    --border: #252a35;
+    --border-strong: #353b4a;
+    --text: #e8eaf0;
+    --muted: #9ba3b3;
+    --faint: #687084;
+    --accent: #7c8cff;
+    --accent-strong: #a3adff;
+    --accent-soft: rgba(124, 140, 255, 0.12);
+    --accent-line: rgba(124, 140, 255, 0.38);
+    --accent-ink: #0b0d1a;
+    --danger: #ff8a8e;
+    --danger-soft: rgba(229, 72, 77, 0.1);
+    --danger-border: rgba(229, 72, 77, 0.3);
+    --radius: 16px;
+    --code-size: 13.5px;
+    --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+    --mono: 'JetBrains Mono', ui-monospace, Consolas, 'Courier New', monospace;
+  }
+  * { box-sizing: border-box; }
+  html { scrollbar-color: var(--border-strong) var(--bg); }
+  body {
+    margin: 0;
+    color: var(--text);
+    font: 15px/1.6 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    background:
+      radial-gradient(900px 460px at 50% -140px, rgba(124, 140, 255, 0.18), transparent 70%),
+      var(--bg);
+    min-height: 100vh;
+    position: relative;
+  }
+  /* faint dot grid behind the header, fading out downwards */
+  body::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 520px; pointer-events: none;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+    -webkit-mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+            mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+  }
+  ::selection { background: rgba(124, 140, 255, 0.35); color: #fff; }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 999px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: #454c5e; }
+  code, pre, textarea { font-family: var(--mono); font-variant-ligatures: none; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  svg.icon { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+  .page { position: relative; max-width: 1180px; margin: 0 auto; padding: 56px 20px 40px; }
+
+  /* ---------- Header ---------- */
+  .site-header { text-align: center; margin-bottom: 40px; }
+  .logo-tile {
+    width: 56px; height: 56px; margin: 0 auto 18px; border-radius: 16px;
+    display: grid; place-items: center; color: var(--accent-strong);
+    background: linear-gradient(145deg, rgba(124, 140, 255, 0.22), rgba(124, 140, 255, 0.06));
+    border: 1px solid var(--accent-line);
+    box-shadow: 0 0 0 6px rgba(124, 140, 255, 0.05), 0 12px 40px -8px rgba(124, 140, 255, 0.45);
+  }
+  .logo-tile svg.icon { width: 28px; height: 28px; }
+  .site-header h1 {
+    font-size: clamp(28px, 5vw, 42px); line-height: 1.15; letter-spacing: -0.03em; margin: 0 0 10px; font-weight: 700;
+    background: linear-gradient(180deg, #ffffff 30%, #b9c0ff);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .site-header p { color: var(--muted); margin: 0; font-size: 16px; }
+
+  /* ---------- Cards ---------- */
+  .card {
+    position: relative;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0) 140px), var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 18px 40px -24px rgba(0, 0, 0, 0.8);
+    margin-bottom: 20px;
+    transition: border-color .25s;
+  }
+  .card:hover { border-color: #2d3240; }
+  .card-title { display: flex; align-items: center; gap: 12px; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; margin: 0 0 20px; }
+  .card-title .ico {
+    width: 32px; height: 32px; border-radius: 9px; display: grid; place-items: center; flex: none;
+    background: var(--accent-soft); border: 1px solid rgba(124, 140, 255, 0.22); color: var(--accent-strong);
+  }
+  .card-title .ico svg.icon { width: 16px; height: 16px; }
+  .card-sub { color: var(--muted); font-size: 14px; margin: -8px 0 18px; }
+  h3 { font-size: 16px; margin: 0 0 8px; }
+
+  .main-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 20px; align-items: stretch; }
+  .main-grid .card { margin-bottom: 20px; }
+
+  /* Header and cards rise in one after another when the page loads */
+  .reveal { animation: rise .6s cubic-bezier(.2, .7, .2, 1) both; }
+  .site-header.reveal { animation-delay: 0s; }
+  #analyzer.reveal { animation-delay: .08s; }
+  #resultCard.reveal { animation-delay: .16s; }
+  #performance.reveal { animation-delay: .24s; }
+  #theory.reveal { animation-delay: .32s; }
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  @media (prefers-reduced-motion: reduce) { .reveal { animation: none; } }
+
+  /* ---------- Editor ---------- */
+  .field-label { display: block; font-size: 13.5px; font-weight: 500; color: var(--muted); margin: 0 0 10px; }
+  .editor {
+    border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--inset);
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .editor:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .editor-bar {
+    display: flex; align-items: center; gap: 8px; padding: 9px 14px;
+    background: var(--surface-2); border-bottom: 1px solid var(--border);
+    font: 500 12.5px var(--mono); color: var(--muted);
+  }
+  .editor-bar .dots { display: flex; gap: 6px; margin-right: 6px; }
+  .editor-bar .dots i { width: 10px; height: 10px; border-radius: 50%; background: #2e3340; }
+  .editor-bar .dots i:first-child { background: rgba(255, 95, 87, 0.55); }
+  .editor-bar .dots i:nth-child(2) { background: rgba(254, 188, 46, 0.5); }
+  .editor-bar .dots i:nth-child(3) { background: rgba(40, 200, 64, 0.45); }
+  .editor-bar label { cursor: text; }
+  .editor-bar .count { margin-left: auto; color: var(--faint); font-weight: 400; }
+  .editor-body { display: flex; }
+  .gutter {
+    flex: none; min-width: 46px; padding: 14px 10px 14px 0; overflow: hidden;
+    text-align: right; white-space: pre; user-select: none;
+    font: var(--code-size)/1.65 var(--mono); color: #3f4556;
+    border-right: 1px solid var(--border); background: rgba(0, 0, 0, 0.12);
+  }
+  textarea#code {
+    flex: 1; min-width: 0; min-height: 300px; resize: vertical; margin: 0;
+    background: transparent; color: var(--text); border: 0; outline: none;
+    padding: 14px 16px; font-size: var(--code-size); line-height: 1.65; tab-size: 4;
+    white-space: pre; overflow-x: auto; caret-color: var(--accent);
+  }
+  textarea#code::placeholder { color: var(--faint); }
+
+  /* ---------- Buttons ---------- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    font: 600 14px var(--sans);
+    border-radius: 11px; padding: 11px 18px; cursor: pointer;
+    border: 1px solid transparent;
+    transition: background .2s, border-color .2s, color .2s, transform .15s, box-shadow .2s;
+  }
+  .btn:active { transform: translateY(1px) scale(.99); }
+  .btn svg.icon { width: 16px; height: 16px; }
+  .btn-primary {
+    background: linear-gradient(180deg, #919eff, #7383f7); color: var(--accent-ink);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 18px -8px rgba(124, 140, 255, 0.7);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 10px 26px -8px rgba(124, 140, 255, 0.85); }
+  .btn-primary:disabled { opacity: .6; cursor: progress; transform: none; }
+  .btn-danger { background: var(--danger-soft); color: var(--danger); border-color: var(--danger-border); }
+  .btn-danger:hover { background: rgba(229, 72, 77, 0.18); transform: translateY(-1px); }
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 16px 0 24px; }
+
+  /* ---------- Example tiles ---------- */
+  .examples { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+  .chip {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: left;
+    font: 500 13.5px var(--sans); color: var(--text);
+    background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 11px; padding: 10px 13px; cursor: pointer;
+    transition: border-color .2s, background .2s, color .2s, transform .15s;
+  }
+  .chip em { font: normal 500 11.5px var(--mono); color: var(--faint); transition: color .2s; }
+  .chip:hover { border-color: var(--border-strong); background: #222632; transform: translateY(-2px); }
+  .chip:hover em { color: var(--muted); }
+  .chip.active { color: var(--accent-strong); border-color: var(--accent); background: var(--accent-soft); box-shadow: 0 0 0 3px rgba(124, 140, 255, 0.08); }
+  .chip.active em { color: var(--accent); }
+  .hint { color: var(--faint); font-size: 12.5px; margin: 18px 0 0; }
+  kbd { font: 500 11px var(--mono); border: 1px solid var(--border-strong); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; color: var(--muted); background: var(--surface-2); }
+
+  /* ---------- Result panel ---------- */
+  .result { display: flex; flex-direction: column; }
+  .result.empty { align-items: center; text-align: center; color: var(--muted); font-size: 14px; padding: 16px 12px 6px; }
+  .result.empty .empty-ico {
+    width: 64px; height: 64px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 12px;
+    background: radial-gradient(circle, rgba(124, 140, 255, 0.14), transparent 70%); color: var(--faint);
+  }
+  .result.empty svg.icon { width: 34px; height: 34px; stroke-width: 1.5; }
+  .result.empty p { margin: 0; max-width: 230px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
+    background: var(--accent-soft); color: var(--accent-strong);
+    border: 1px solid var(--accent-line);
+    font-weight: 600; font-size: 12.5px; letter-spacing: .02em;
+    padding: 4px 12px; border-radius: 999px;
+  }
+  .badge::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .bigo {
+    font: 600 40px/1.1 var(--mono); letter-spacing: -0.03em; margin: 16px 0 4px;
+    background: linear-gradient(90deg, #ffffff, #b3bbff); -webkit-background-clip: text; background-clip: text; color: transparent;
+  }
+  .bigo sup { font-size: .5em; }
+  .bigo-sub { color: var(--faint); font-size: 13px; margin-bottom: 16px; }
+  .rule-tag { font: 500 12px var(--mono); color: var(--accent-strong); margin-bottom: 4px; }
+  .why { margin: 0 0 14px; font-size: 14.5px; color: #d3d7e0; }
+  .why code, .evidence code, .card-sub code { background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 0 5px; font-size: .88em; color: var(--text); }
+  .recurrence {
+    font: 13.5px var(--mono); background: var(--surface-2); border-left: 3px solid var(--accent);
+    padding: 9px 12px; border-radius: 0 8px 8px 0; margin: 0 0 12px;
+  }
+  .note { font-size: 13.5px; color: var(--muted); margin: 0 0 12px; }
+  details.evidence { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; }
+  details.evidence summary { cursor: pointer; color: var(--muted); font-size: 13.5px; font-weight: 500; transition: color .15s; }
+  details.evidence summary:hover { color: var(--text); }
+  details.evidence ul { margin: 10px 0 0; padding-left: 18px; font-size: 13.5px; color: var(--muted); }
+  details.evidence li { margin-bottom: 4px; }
+  .fade-in { animation: fade .35s ease; }
+  @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  /* ---------- Complexity scale (Result card) ---------- */
+  .scale { margin-top: 18px; border-top: 1px solid var(--border); padding-top: 16px; }
+  .scale-head { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); font-weight: 500; margin-bottom: 10px; }
+  .scale-head span:last-child { color: var(--faint); font-weight: 400; }
+  .scale-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; }
+  .scale-list li {
+    position: relative; overflow: hidden;
+    display: grid; grid-template-columns: 92px 1fr auto; align-items: center; gap: 10px;
+    padding: 7px 12px; border-radius: 9px; border: 1px solid transparent; font-size: 13.5px;
+    background: var(--surface-2); transition: background .25s, border-color .25s, transform .25s;
+  }
+  .scale-list li::before {
+    content: ""; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px; border-radius: 0 3px 3px 0;
+    background: var(--accent); transform: scaleY(0); transition: transform .25s;
+  }
+  .scale-list code { font-size: 13px; color: var(--text); }
+  .scale-list .nm { color: #c9cdd6; }
+  .scale-list .ex { color: var(--faint); font-size: 12.5px; text-align: right; }
+  .scale-list li.on { background: var(--accent-soft); border-color: var(--accent-line); }
+  .scale-list li.on::before { transform: scaleY(1); }
+  .scale-list li.on code, .scale-list li.on .nm { color: var(--accent-strong); font-weight: 600; }
+  .scale-list li.on .ex { color: var(--muted); }
+
+  /* ---------- Performance test ---------- */
+  .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; margin-bottom: 14px; }
+  .controls > label { font-weight: 500; font-size: 14px; color: var(--muted); }
+  select {
+    appearance: none; -webkit-appearance: none;
+    font: 500 14px var(--sans); color: var(--text);
+    background: var(--surface-2) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239ba3b3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 11px center;
+    border: 1px solid var(--border); border-radius: 10px; padding: 9px 34px 9px 12px; cursor: pointer;
+    transition: border-color .15s;
+  }
+  select:hover { border-color: var(--border-strong); }
+  .progress { flex: 1 1 160px; height: 6px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+  .progress > div {
+    height: 100%; width: 0; border-radius: inherit; transition: width .25s;
+    background: linear-gradient(90deg, #6f7ef5, #a3adff, #6f7ef5); background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+  @keyframes shimmer { from { background-position: 200% 0; } to { background-position: 0 0; } }
+  .status { color: var(--muted); font-size: 13.5px; min-height: 1.6em; margin: 0 0 14px; }
+  .table-wrap { overflow-x: auto; margin-top: 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--inset); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { padding: 10px 14px; text-align: right; white-space: nowrap; }
+  th:first-child, td:first-child { text-align: left; }
+  thead th { color: var(--muted); font-weight: 500; font-size: 12.5px; background: var(--surface-2); border-bottom: 1px solid var(--border); }
+  tbody td { font-family: var(--mono); border-bottom: 1px solid rgba(37, 42, 53, 0.7); }
+  tbody tr:last-child td { border-bottom: 0; }
+  tbody tr { transition: background .15s; }
+  tbody tr:hover td { background: rgba(124, 140, 255, 0.05); }
+  tfoot td { font-family: var(--mono); background: var(--accent-soft); border-top: 1px solid var(--accent-line); color: var(--accent-strong); font-weight: 500; }
+  tfoot td:first-child { font-family: var(--sans); color: var(--text); }
+  tfoot span { color: var(--muted); font-weight: 400; }
+  td.placeholder { text-align: center; font-family: var(--sans); padding: 22px; color: var(--faint); }
+  .expect { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 14px; }
+  .expect div {
+    font-size: 13.5px; color: var(--muted); background: var(--surface-2); border: 1px solid var(--border);
+    border-radius: 11px; padding: 11px 13px 11px 15px; position: relative; overflow: hidden;
+    transition: border-color .2s;
+  }
+  .expect div::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: linear-gradient(180deg, var(--accent), transparent); }
+  .expect div:hover { border-color: var(--border-strong); }
+  .expect b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Quick reference ---------- */
+  .ref-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 28px; }
+  .ref-grid h3 { font-size: 12px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); margin: 0 0 10px; }
+  .ref-block + .ref-block { margin-top: 24px; }
+  .rows { display: grid; gap: 6px; }
+  .row {
+    display: grid; grid-template-columns: 34px 1fr auto; align-items: center; gap: 12px;
+    background: var(--surface-2); border: 1px solid var(--border); border-radius: 11px; padding: 8px 12px 8px 8px;
+    font-size: 14px; transition: border-color .2s, transform .2s;
+  }
+  .row:hover { border-color: var(--border-strong); transform: translateX(2px); }
+  .row .sym {
+    width: 34px; height: 34px; border-radius: 9px; display: grid; place-items: center;
+    font: 600 17px var(--mono); color: var(--accent-strong); background: var(--accent-soft);
+  }
+  .row .sym.case { font-size: 13px; }
+  .row small { display: block; color: var(--muted); font-size: 12.5px; }
+  .row .f { font: 12.5px var(--mono); color: var(--text); text-align: right; }
+  .formula { font: 500 15px var(--mono); margin: 0 0 10px; color: var(--text); }
+  .formula span { color: var(--faint); font: 13px var(--sans); }
+  .cheat { margin-top: 0; }
+  .cheat td { font-size: 13px; }
+  .cheat td:first-child { font-family: var(--sans); font-weight: 500; }
+
+  footer { color: var(--faint); font-size: 13px; text-align: center; padding: 14px 0 0; }
+  footer b { color: var(--muted); font-weight: 500; }
+
+  /* ---------- Responsive ---------- */
+  @media (max-width: 900px) {
+    .main-grid { grid-template-columns: 1fr; gap: 0; }
+    .ref-grid { grid-template-columns: 1fr; gap: 24px; }
+  }
+  @media (max-width: 640px) {
+    :root { --code-size: 13px; }
+    .page { padding: 36px 16px 32px; }
+    .card { padding: 18px; }
+    .logo-tile { width: 48px; height: 48px; border-radius: 14px; }
+    .logo-tile svg.icon { width: 24px; height: 24px; }
+    textarea#code { min-height: 250px; }
+    .gutter { min-width: 36px; padding-right: 8px; }
+    .examples { grid-template-columns: 1fr 1fr; }
+    .bigo { font-size: 32px; }
+    .row { grid-template-columns: 34px 1fr; }
+    .row .f { grid-column: 2; text-align: left; }
+    .scale-list li { grid-template-columns: 84px 1fr; }
+    .scale-list .ex { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <header class="site-header reveal">
+    <div class="logo-tile"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+    <h1>Time Complexity Analyzer</h1>
+    <p>Find the Big-O of an algorithm from its pseudocode</p>
+  </header>
+
+  <div class="main-grid">
+    <!-- ===================== 1. ANALYZER ===================== -->
+    <section class="card reveal" id="analyzer">
+      <h2 class="card-title"><span class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg></span>Analyzer</h2>
+      <div class="editor">
+        <div class="editor-bar"><span class="dots"><i></i><i></i><i></i></span><label for="code">pseudocode.txt</label><span class="count" id="lineCount">0 lines</span></div>
+        <div class="editor-body">
+          <div class="gutter" id="gutter" aria-hidden="true">1</div>
+          <textarea id="code" wrap="off" spellcheck="false" autocomplete="off" placeholder="function example(arr, n)&#10;    for i = 0 to n - 1&#10;        print arr[i]"></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="analyzeBtn"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><polygon points="6 4 20 12 6 20 6 4"/></svg>Analyze</button>
+        <button class="btn btn-danger" id="clearBtn"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>Clear</button>
+      </div>
+      <span class="field-label">Examples</span>
+      <div class="examples" id="presets"></div>
+      <p class="hint"><kbd>Ctrl</kbd> + <kbd>Enter</kbd> to analyze · <kbd>Tab</kbd> indents</p>
+    </section>
+
+    <section class="card reveal" id="resultCard">
+      <h2 class="card-title"><span class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></span>Result</h2>
+      <div class="result empty" id="result" aria-live="polite"></div>
+      <div class="scale">
+        <div class="scale-head"><span>Complexity classes</span><span>fastest → slowest</span></div>
+        <ul class="scale-list" id="scale"></ul>
+      </div>
+    </section>
+  </div>
+
+  <!-- ===================== 2. PERFORMANCE TEST ===================== -->
+  <section class="card reveal" id="performance">
+    <h2 class="card-title"><span class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></span>Performance test</h2>
+    <p class="card-sub">Times real JavaScript versions of four algorithms with <code>performance.now()</code> on growing random arrays.</p>
+    <div class="controls">
+      <label for="perfMax" style="font-weight:500">Largest n</label>
+      <select id="perfMax">
+        <option value="2500">2,500</option>
+        <option value="5000">5,000</option>
+        <option value="10000" selected>10,000</option>
+        <option value="20000">20,000 (slower)</option>
+      </select>
+      <button class="btn btn-primary" id="perfBtn">Run test</button>
+      <div class="progress" aria-hidden="true"><div id="perfBar"></div></div>
+    </div>
+    <div class="status" id="perfStatus">Press <b>Run test</b>. Each algorithm runs on 8 input sizes up to the largest n.</div>
+    <div class="table-wrap"><table id="perfTable"><thead></thead><tbody></tbody></table></div>
+    <div class="expect">
+      <div><b>Linear search · O(n)</b><br>Time grows in a straight line. Double n, double the time.</div>
+      <div><b>Binary search · O(log n)</b><br>Almost flat. Doubling n adds a single extra step.</div>
+      <div><b>Bubble sort · O(n²)</b><br>Doubling n roughly quadruples the time.</div>
+      <div><b>Merge sort · O(n log n)</b><br>Slightly more than linear. Far below bubble sort at large n.</div>
+    </div>
+  </section>
+
+  <!-- ===================== 3. QUICK REFERENCE ===================== -->
+  <section class="card reveal" id="theory">
+    <h2 class="card-title"><span class="ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></span>Quick reference</h2>
+    <div class="ref-grid">
+      <div>
+        <div class="ref-block">
+          <h3>Asymptotic notations</h3>
+          <div class="rows">
+            <div class="row"><span class="sym">O</span><div>Big-O<small>Upper bound · worst case</small></div><span class="f">f(n) ≤ c·g(n)</span></div>
+            <div class="row"><span class="sym">Ω</span><div>Big-Omega<small>Lower bound · best case</small></div><span class="f">f(n) ≥ c·g(n)</span></div>
+            <div class="row"><span class="sym">Θ</span><div>Big-Theta<small>Tight bound · exact rate</small></div><span class="f">c₁g(n) ≤ f(n) ≤ c₂g(n)</span></div>
+            <div class="row"><span class="sym">o</span><div>little-o<small>Strictly slower growth</small></div><span class="f">f(n) / g(n) → 0</span></div>
+          </div>
+        </div>
+        <div class="ref-block">
+          <h3>Master Theorem</h3>
+          <p class="formula">T(n) = a·T(n/b) + f(n) <span>· compare f(n) with n<sup>log<sub>b</sub>a</sup></span></p>
+          <div class="rows">
+            <div class="row"><span class="sym case">1</span><div>f(n) is smaller<small>e.g. 8T(n/2) + n²</small></div><span class="f">Θ(n<sup>log<sub>b</sub>a</sup>)</span></div>
+            <div class="row"><span class="sym case">2</span><div>f(n) is equal<small>e.g. merge sort 2T(n/2) + n</small></div><span class="f">Θ(n<sup>log<sub>b</sub>a</sup> log n)</span></div>
+            <div class="row"><span class="sym case">3</span><div>f(n) is bigger<small>e.g. 2T(n/2) + n²</small></div><span class="f">Θ(f(n))</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="ref-block">
+        <h3>Algorithm cheat sheet</h3>
+        <div class="table-wrap cheat">
+          <table>
+            <thead><tr><th>Algorithm</th><th>Best</th><th>Average</th><th>Worst</th><th>Space</th></tr></thead>
+            <tbody>
+              <tr><td>Linear search</td><td>O(1)</td><td>O(n)</td><td>O(n)</td><td>O(1)</td></tr>
+              <tr><td>Binary search</td><td>O(1)</td><td>O(log n)</td><td>O(log n)</td><td>O(1)</td></tr>
+              <tr><td>Bubble sort</td><td>O(n)</td><td>O(n²)</td><td>O(n²)</td><td>O(1)</td></tr>
+              <tr><td>Selection sort</td><td>O(n²)</td><td>O(n²)</td><td>O(n²)</td><td>O(1)</td></tr>
+              <tr><td>Insertion sort</td><td>O(n)</td><td>O(n²)</td><td>O(n²)</td><td>O(1)</td></tr>
+              <tr><td>Merge sort</td><td>O(n log n)</td><td>O(n log n)</td><td>O(n log n)</td><td>O(n)</td></tr>
+              <tr><td>Quick sort</td><td>O(n log n)</td><td>O(n log n)</td><td>O(n²)</td><td>O(log n)</td></tr>
+              <tr><td>Heap sort</td><td>O(n log n)</td><td>O(n log n)</td><td>O(n log n)</td><td>O(1)</td></tr>
+              <tr><td>Fibonacci (recursive)</td><td>O(2ⁿ)</td><td>O(2ⁿ)</td><td>O(2ⁿ)</td><td>O(n)</td></tr>
+              <tr><td>Sum of subsets</td><td>O(2ⁿ)</td><td>O(2ⁿ)</td><td>O(2ⁿ)</td><td>O(n)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer><b>Time Complexity Analyzer</b> · DAA course project</footer>
+</div>
+
+<script>
+/* =====================================================================
+   PRESETS: example pseudocode shown by the buttons above the textarea
+   ===================================================================== */
+const PRESETS = {
+  'Linear search':
+`function linearSearch(arr, n, key)
+    for i = 0 to n - 1
+        if arr[i] == key
+            return i
+    return -1`,
+
+  'Binary search':
+`function binarySearch(arr, n, key)
+    low = 0
+    high = n - 1
+    while low <= high
+        mid = (low + high) / 2
+        if arr[mid] == key
+            return mid
+        else if arr[mid] < key
+            low = mid + 1
+        else
+            high = mid - 1
+    return -1`,
+
+  'Merge sort':
+`function mergeSort(arr, left, right)
+    if left < right
+        mid = (left + right) / 2
+        mergeSort(arr, left, mid)
+        mergeSort(arr, mid + 1, right)
+        merge(arr, left, mid, right)
+
+function merge(arr, left, mid, right)
+    i = left
+    j = mid + 1
+    while i <= mid and j <= right
+        if arr[i] <= arr[j]
+            temp.add(arr[i])
+            i = i + 1
+        else
+            temp.add(arr[j])
+            j = j + 1
+    copy the remaining elements into temp
+    for k = left to right
+        arr[k] = temp[k - left]`,
+
+  'Quick sort':
+`function quickSort(arr, low, high)
+    if low < high
+        pi = partition(arr, low, high)
+        quickSort(arr, low, pi - 1)
+        quickSort(arr, pi + 1, high)
+
+function partition(arr, low, high)
+    pivot = arr[high]
+    i = low - 1
+    for j = low to high - 1
+        if arr[j] < pivot
+            i = i + 1
+            swap arr[i], arr[j]
+    swap arr[i + 1], arr[high]
+    return i + 1`,
+
+  'Bubble sort':
+`function bubbleSort(arr, n)
+    for i = 0 to n - 2
+        for j = 0 to n - i - 2
+            if arr[j] > arr[j + 1]
+                swap arr[j], arr[j + 1]`,
+
+  'Fibonacci (recursive)':
+`function fib(n)
+    if n <= 1
+        return n
+    return fib(n - 1) + fib(n - 2)`,
+
+  'Sum of subsets':
+`function sumOfSubsets(set, i, n, target, current)
+    if current == target
+        print "subset found"
+        return
+    if i == n
+        return
+    // branch 1: include set[i]
+    sumOfSubsets(set, i + 1, n, target, current + set[i])
+    // branch 2: exclude set[i]
+    sumOfSubsets(set, i + 1, n, target, current)`
+};
+
+/* =====================================================================
+   1. ANALYZER: rule-based complexity detection
+
+   This is NOT a real parser. The code is split into lines, each line gets
+   a nesting level, and a handful of regular-expression rules look for
+   patterns that textbooks use to spot each complexity class:
+
+     Rule 1  Single loop over n                      → O(n)
+     Rule 2  Nested loops (costs multiply)           → O(n²), O(n³)
+     Rule 3  Loop variable halved/doubled, or a      → O(log n)
+             "mid" midpoint recomputed each pass
+     Rule 4  Recursion on halves (n/2, mid) plus     → Master Theorem,
+             extra work per call (e.g. linear merge)    e.g. O(n log n)
+     Rule 5  2+ recursive calls on n − 1 (or i + 1)  → O(2ⁿ)
+
+   A complexity is stored as n^p · (log n)^l, or as e^n when e > 0.
+   Keeping it in this form means that nesting is simply "add the exponents",
+   and comparing two costs means comparing the exponents.
+   ===================================================================== */
+
+const ONE = { p: 0, l: 0, e: 0 };   // O(1)
+const LIN = { p: 1, l: 0, e: 0 };   // O(n)
+const LOG = { p: 0, l: 1, e: 0 };   // O(log n)
+const FACTORIAL = 1000;             // sentinel "base" meaning n!
+
+// Nested work multiplies: n^a·log^b × n^c·log^d = n^(a+c)·log^(b+d)
+const mul = (a, b) => ({ p: a.p + b.p, l: a.l + b.l, e: Math.max(a.e, b.e) });
+// A single number that orders complexities: exponential > polynomial; then by power of n, then power of log n
+const rank = c => c.e ? 1e6 + c.e : c.p * 1000 + c.l;
+const gt = (a, b) => rank(a) > rank(b) + 1e-9;
+
+const esc = s => String(s).replace(/[&<>"]/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch]));
+const snip = s => '<code>' + esc(s.length > 42 ? s.slice(0, 40) + '…' : s) + '</code>';
+
+/* ---------- Step 1: turn text into lines with a nesting "level" ----------
+   level = braceDepth * 1000 + indentation width.
+   Indented pseudocode nests by indentation; C/Java-style code nests by
+   braces. Combining both makes either style work. */
+function preprocess(src) {
+  const out = [];
+  let depth = 0;
+  src.replace(/\r/g, '').split('\n').forEach((raw, i) => {
+    // Strip comments: "// ..." (but keep Python's "//" floor division, as in "i // 2" or "i //= 2"), "/* */" and "# ..."
+    let code = raw.replace(/\/\*.*?\*\//g, '').replace(/\/\/(?!=|\s*\d).*$/, '').replace(/#.*$/, '');
+    const indent = code.match(/^[ \t]*/)[0].replace(/\t/g, '    ').length;
+    let text = code.trim();
+    const leadingCloses = (text.match(/^\}+/) || [''])[0].length;
+    const lineDepth = Math.max(0, depth - leadingCloses);
+    for (const ch of text) { if (ch === '{') depth++; else if (ch === '}') depth = Math.max(0, depth - 1); }
+    text = text.replace(/^\}+\s*/, '');
+    // Skip blank lines and pure block terminators ("}", "end", "end for", "endwhile", "done"...)
+    if (!text || /^(\{|\}|done|fi|next(\s+\w+)?|end(\s*(for|while|if|function|procedure|loop|algorithm))?)\s*;?$/i.test(text)) return;
+    out.push({ no: i + 1, text, lower: text.toLowerCase(), level: lineDepth * 1000 + indent });
+  });
+  return out;
+}
+
+/* ---------- Step 2: find function headers and split the code ---------- */
+const NOT_NAMES = new Set(['if', 'while', 'for', 'switch', 'else', 'elif', 'return', 'catch', 'foreach', 'print', 'until', 'with', 'repeat']);
+function headerName(t) {
+  let m = t.match(/^(?:function|def|procedure|algorithm|func|fn|sub|method)\s+([A-Za-z_]\w*)\s*\(/i)            // function foo(  def foo(  Algorithm Foo(
+       || t.match(/^(?:(?:public|private|protected|static|final|inline|void|int|long|bool|boolean|double|float|char|string|auto)(?:\[\])*\s+)+\**([A-Za-z_]\w*)\s*\([^;]*\)\s*\{?\s*$/i) // int foo(int n) {
+       || t.match(/^([A-Za-z_]\w*)\s*\([^()]*\)\s*(?:\{|:)\s*$/);                                                  // foo(n) {   foo(n):
+  return m && !NOT_NAMES.has(m[1].toLowerCase()) ? m[1] : null;
+}
+
+function splitFunctions(lines) {
+  const fns = [];
+  let cur = { name: null, header: null, body: [] };
+  lines.forEach((L, idx) => {
+    const name = headerName(L.text);
+    if (name) {
+      if (cur.name || cur.body.length) fns.push(cur);
+      const next = lines[idx + 1];
+      // If the next line is indented deeper, the body ends at the first dedent; otherwise it runs to the next header
+      cur = { name, header: L, body: [], indented: !!next && next.level > L.level };
+      return;
+    }
+    if (cur.name && cur.indented && L.level <= cur.header.level) {   // dedent: back at top level
+      fns.push(cur);
+      cur = { name: null, header: null, body: [] };
+    }
+    cur.body.push(L);
+  });
+  fns.push(cur);
+  return fns.filter(f => f.name || f.body.length);
+}
+
+/* ---------- Step 3: loop rules ---------- */
+const isLoop = L => /^(for|foreach|while|repeat|loop|do)\b/i.test(L.text) && !/^while\b.*\)\s*;\s*$/i.test(L.text); // ignore the "} while (x);" tail of a do-while
+
+// RULE 3 patterns: a variable multiplied or divided by a constant each pass (i = i*2, i /= 2, i >>= 1, i = 2*i, i = floor(i/2))
+const LOG_UPDATE = [
+  /\b([a-z_]\w*)\s*=\s*\1\s*(?:\*|\/\/?|>>|<<)\s*\d+/i,
+  /\b([a-z_]\w*)\s*=\s*\d+\s*\*\s*\1\b/i,
+  /\b([a-z_]\w*)\s*(?:\*|\/\/?|>>|<<)=\s*\d+/i,
+  /\b([a-z_]\w*)\s*=\s*(?:floor|ceil|int|math\.floor)\s*\(\s*\1\s*\/\/?\s*\d+/i,
+];
+// RULE 3 (binary-search form): a midpoint is recomputed inside the loop, so half the range is discarded each pass
+const MID_ASSIGN = /\b(mid\w*|middle)\s*=(?!=)/i;
+const LOOP_WORDS = new Set(['for', 'each', 'foreach', 'in', 'range', 'to', 'do', 'int', 'let', 'var', 'step', 'while', 'repeat', 'times', 'downto', 'and', 'or', 'not', 'from', 'loop', 'until']);
+
+// Lines directly inside loop k (nested loops' bodies are skipped, so an inner i*=2 doesn't make the outer loop logarithmic)
+function directBody(L, k) {
+  const out = [];
+  let skipAbove = null;
+  for (let j = k + 1; j < L.length && L[j].level > L[k].level; j++) {
+    if (skipAbove !== null && L[j].level > skipAbove) continue;
+    skipAbove = null;
+    if (isLoop(L[j])) { skipAbove = L[j].level; continue; }
+    out.push(L[j]);
+  }
+  return out;
+}
+
+function logUpdateVar(text) {
+  for (const re of LOG_UPDATE) { const m = text.match(re); if (m) return m[1].toLowerCase(); }
+  return null;
+}
+
+// RULE 1 exception: "for i = 1 to 10" / "while k < 100": the bound is a number and no other variable appears → O(1)
+function isConstLoop(text) {
+  const ids = [...new Set((text.toLowerCase().match(/[a-z_]\w*/g) || []).filter(w => !LOOP_WORDS.has(w)))];
+  return /\d/.test(text) && ids.length <= 1;   // the one allowed identifier is the loop counter itself
+}
+
+function classifyLoop(L, k) {
+  const hdr = L[k];
+  const body = directBody(L, k);
+  const headerIds = new Set(hdr.lower.match(/[a-z_]\w*/g) || []);
+  // Rule 3: the loop's own control variable is multiplied/divided (checked in the header and the direct body)
+  for (const x of [hdr, ...body]) {
+    const v = logUpdateVar(x.text);
+    if (v && (headerIds.has(v) || /^(do|repeat|loop)\b/i.test(hdr.text))) {
+      return { kind: 'log', factor: LOG, line: hdr,
+        why: `${x === hdr ? 'its header' : 'line ' + x.no} multiplies or divides <code>${esc(v)}</code> by a constant (${snip(x.text)})` };
+    }
+  }
+  const mid = body.find(x => MID_ASSIGN.test(x.text));
+  if (mid) return { kind: 'log', factor: LOG, line: hdr, why: `line ${mid.no} recomputes a midpoint (${snip(mid.text)}), so half the range is thrown away each pass` };
+  if (isConstLoop(hdr.text)) return { kind: 'const', factor: ONE, line: hdr };
+  // Rule 1: anything else that loops is assumed to run over the input: × n
+  return { kind: 'linear', factor: LIN, line: hdr };
+}
+
+const callRe = name => new RegExp('\\b' + name + '\\s*\\(', 'i');
+function callArgs(text, name) {           // returns the argument string of every call to `name` on this line
+  const out = [], re = new RegExp('\\b' + name + '\\s*\\(', 'gi');
+  let m;
+  while ((m = re.exec(text))) {
+    let i = re.lastIndex, d = 1; const start = i;
+    while (i < text.length && d > 0) { if (text[i] === '(') d++; else if (text[i] === ')') d--; i++; }
+    out.push(text.slice(start, d === 0 ? i - 1 : i));
+  }
+  return out;
+}
+
+/* Walk a function's body with a stack of open loops. The cost of a line is
+   (product of the enclosing loops' factors) × (cost of the line itself).
+   A line that calls another function costs whatever that function costs.
+   We keep the most expensive line: that's the function's non-recursive work. */
+function loopScan(fn, ctx) {
+  const L = fn.body, stack = [], loops = [], selfCalls = [];
+  let best = { cost: ONE, chain: [], helper: null };
+  L.forEach((line, k) => {
+    while (stack.length && stack[stack.length - 1].level >= line.level) stack.pop();
+    let chain = stack.map(s => s.cls);
+    if (isLoop(line)) {
+      const cls = classifyLoop(L, k);
+      loops.push(cls);
+      stack.push({ level: line.level, cls });
+      chain = [...chain, cls];
+    }
+    // Recursive calls are handled separately (Rules 4 and 5)
+    if (fn.name && callRe(fn.name).test(line.text)) {
+      const args = callArgs(line.text, fn.name);
+      selfCalls.push({ line, k, args, count: args.length, inLoop: chain.some(c => c.kind !== 'const') });
+    }
+    // Calls to other functions defined in the textarea
+    let own = ONE, helper = null;
+    for (const other of ctx.fns) {
+      if (other === fn || !other.name || !callRe(other.name).test(line.text)) continue;
+      const r = analyzeFn(other, ctx);
+      if (gt(r.cost, own) || !helper) { own = r.cost; helper = { name: other.name, cost: r.cost, line }; }
+    }
+    // merge()/partition() used but not defined: assume the textbook linear-time version
+    if (!helper) {
+      const m = line.text.match(/\b(merge|partition)\s*\(/i);
+      if (m && !ctx.fns.some(f => f.name && f.name.toLowerCase() === m[1].toLowerCase())) {
+        own = LIN; helper = { name: m[1], cost: LIN, line, assumed: true };
+      }
+    }
+    const total = chain.reduce((c, cls) => mul(c, cls.factor), own);
+    if (gt(total, best.cost)) best = { cost: total, chain, helper };
+  });
+  return { best, loops, selfCalls };
+}
+
+/* ---------- Step 4: recursion rules ---------- */
+// How does one recursive call shrink the input?
+function argKind(arg, bodyText) {
+  const s = arg.toLowerCase();
+  if (/\/\/?\s*\d|\bmid\w*\b|\bmiddle\b|\bhalf\b|>>\s*1/.test(s)) return 'half';                    // n/2, mid, arr[:mid]
+  if (/\b(pi|pivot\w*|pidx|pindex|partitionindex)\b/.test(s)) return 'pivot';                       // quickSort(low, pi - 1)
+  if (/\b(p|q|j|pos|k)\s*[-+]\s*1\b/.test(s) && /partition|pivot/.test(bodyText)) return 'pivot';
+  return 'dec';                                                                                       // n - 1, i + 1, rest of list...
+}
+
+// Two recursive calls in different branches (if/else, or each after "return") never both run: only one counts
+function isExclusive(body, k) {
+  const L = body[k], prev = body[k - 1];
+  return /\breturn\b/.test(L.lower) || /^(else|elif)\b/.test(L.lower) ||
+    (prev && prev.level < L.level && /^(else|elif|if)\b/.test(prev.lower));
+}
+
+function analyzeFn(fn, ctx) {
+  if (fn.res) return fn.res;
+  if (fn.busy) return { cost: ONE };          // mutual recursion guard
+  fn.busy = true;
+  const scan = loopScan(fn, ctx);
+  const work = scan.best.cost;
+  let res = { fn, scan, work, cost: work, kind: 'loops' };
+  const sc = scan.selfCalls;
+
+  if (sc.length) {
+    const bodyText = fn.body.map(l => l.lower).join('\n');
+    const args = sc.flatMap(c => c.args);
+    const kinds = args.map(a => argKind(a, bodyText));
+    let a = args.length;
+    if (sc.length > 1 && sc.every(c => isExclusive(fn.body, c.k))) a = Math.max(...sc.map(c => c.count));
+    const inLoop = sc.some(c => c.inLoop);
+    const half = kinds.includes('half'), pivot = !half && kinds.includes('pivot');
+
+    if (half || pivot) {
+      /* RULE 4: divide & conquer, T(n) = a·T(n/b) + f(n), solved with the Master Theorem.
+         f(n) is the function's own non-recursive work (loops + helper calls like merge). */
+      const bm = args.join(' ').match(/\/\/?\s*(\d+)/);
+      const b = bm && +bm[1] > 1 ? +bm[1] : 2;
+      const crit = Math.log(a) / Math.log(b);           // log_b(a): the critical exponent
+      let cost, caseNo;
+      if (work.e) { cost = work; caseNo = 3; }
+      else if (work.p < crit - 1e-9) { cost = { p: crit, l: 0, e: 0 }; caseNo = 1; }        // leaves dominate
+      else if (Math.abs(work.p - crit) < 1e-9) { cost = { p: crit, l: work.l + 1, e: 0 }; caseNo = 2; } // balanced: × log n
+      else { cost = work; caseNo = 3; }                                                      // root work dominates
+      res = { ...res, kind: pivot ? 'pivot' : 'divide', a, b, crit, caseNo, cost };
+    } else if (inLoop) {
+      // A recursive call inside a loop over n (permutations, N-Queens...): n·(n−1)·(n−2)… → factorial
+      res = { ...res, kind: 'factorial', a, cost: { p: 0, l: 0, e: FACTORIAL } };
+    } else if (a >= 2) {
+      // RULE 5: 2+ calls, each only one smaller: the call tree doubles every level → a^n
+      res = { ...res, kind: 'branch', a, cost: { p: 0, l: 0, e: a } };
+    } else {
+      // One call on n − 1: n levels, each doing f(n) work → n · f(n)
+      res = { ...res, kind: 'dec', a, cost: mul(LIN, work) };
+    }
+  }
+  fn.busy = false;
+  fn.res = res;
+  return res;
+}
+
+/* ---------- Formatting ---------- */
+function fmtNum(x) { return Number.isInteger(x) ? String(x) : x.toFixed(2); }
+function fmt(c) {
+  if (c.e >= FACTORIAL) return 'n!';
+  if (c.e) return `${c.e}<sup>n</sup>`;
+  const parts = [];
+  if (c.p === 1) parts.push('n'); else if (c.p > 0) parts.push(`n<sup>${fmtNum(c.p)}</sup>`);
+  if (c.l === 1) parts.push('log n'); else if (c.l > 1) parts.push(`log<sup>${c.l}</sup> n`);
+  return parts.length ? parts.join(' ') : '1';
+}
+function category(c) {
+  if (c.e >= FACTORIAL) return 'Factorial';
+  if (c.e) return 'Exponential';
+  if (c.p === 0 && c.l === 0) return 'Constant';
+  if (c.p === 0) return 'Logarithmic';
+  if (c.p === 1 && c.l === 0) return 'Linear';
+  if (c.p === 1) return 'Linearithmic';
+  if (c.p === 2 && c.l === 0) return 'Quadratic';
+  if (c.p === 3 && c.l === 0) return 'Cubic';
+  return 'Polynomial';
+}
+const fnLabel = fn => fn.name ? `<code>${esc(fn.name)}()</code>` : 'the top-level code';
+const plainFmt = c => fmt(c).replace(/<sup>(.*?)<\/sup>/g, '^$1');
+
+/* ---------- Plain-English explanation of the rule that decided the result ---------- */
+function explain(res) {
+  const { kind, scan, work, fn } = res;
+  const helper = scan.best.helper;
+  const helperTxt = helper ? ` It calls ${helper.assumed ? '' : 'the helper '}<code>${esc(helper.name)}()</code>${helper.assumed ? ' (assumed linear, the textbook version)' : ''}, which costs O(${fmt(helper.cost)}).` : '';
+  const self = fn.name ? `<code>${esc(fn.name)}()</code>` : 'The function';
+
+  if (kind === 'divide' || kind === 'pivot') {
+    const { a, b, caseNo, crit } = res;
+    const caseTxt = { 1: 'the recursive calls dominate', 2: 'the work is the same at every level of the recursion tree, so multiply by log n', 3: 'the work done outside the recursive calls dominates' }[caseNo];
+    const out = {
+      rule: 'Rule 4 · Divide & conquer',
+      text: `${self} calls itself ${a === 1 ? 'once' : a + '×'} on ${kind === 'pivot' ? 'the two sides of a pivot' : '1/' + b + ' of the input'} and does O(${fmt(work)}) extra work per call.${helperTxt} By the Master Theorem (case ${caseNo}: n<sup>log<sub>${b}</sub>${a}</sup> = n<sup>${fmtNum(crit)}</sup>), ${caseTxt}.`,
+      recurrence: `T(n) = ${a === 1 ? '' : a}T(n/${b}) + O(${plainFmt(work)})`
+    };
+    if (kind === 'pivot') out.note = `Assumes the pivot splits the array roughly in half, which is the average case. If the pivot is always the smallest or largest element, the recurrence becomes T(n) = T(n − 1) + O(n), giving a worst case of O(n²).`;
+    return out;
+  }
+  if (kind === 'branch') {
+    const lines = [...new Set(res.scan.selfCalls.map(c => c.line.no))].join(', ');
+    return {
+      rule: 'Rule 5 · Branching recursion',
+      text: `${self} makes ${res.a} recursive calls (line ${lines}), and each call only shrinks the problem by a constant (${res.scan.selfCalls.flatMap(c => c.args).slice(0, 3).map(x => snip(x.trim())).join(', ')}). The call tree multiplies by ${res.a} at each of about n levels.`,
+      recurrence: `T(n) = ${res.a}T(n − 1) + O(${plainFmt(work)})`
+    };
+  }
+  if (kind === 'factorial') return {
+    rule: 'Recursion inside a loop',
+    text: `${self} calls itself inside a loop over the input (line ${res.scan.selfCalls[0].line.no}). Each level branches roughly n, n − 1, n − 2… ways, which gives factorial growth.`,
+    recurrence: `T(n) = n·T(n − 1) + O(${plainFmt(work)})`
+  };
+  if (kind === 'dec') return {
+    rule: 'Linear recursion',
+    text: `${self} calls itself once on a slightly smaller input (${snip(res.scan.selfCalls[0].args[0].trim())}), so there are about n levels of recursion, each doing O(${fmt(work)}) work.${helperTxt}`,
+    recurrence: `T(n) = T(n − 1) + O(${plainFmt(work)})`
+  };
+
+  // ----- Loop-only results (Rules 1, 2, 3) -----
+  const chain = scan.best.chain.filter(c => c.kind !== 'const');
+  const lin = chain.filter(c => c.kind === 'linear'), lg = chain.filter(c => c.kind === 'log');
+  const lineList = cs => cs.map(c => c.line.no).join(' → ');
+  if (!chain.length && !helper) return {
+    rule: 'Constant',
+    text: scan.loops.length
+      ? `The only loops have fixed bounds (line ${scan.loops.map(c => c.line.no).join(', ')}), so the work does not depend on n.`
+      : 'No loop over n and no recursion was found, so every statement runs a fixed number of times.'
+  };
+  if (!chain.length && helper) return { rule: 'Function call', text: `The most expensive line (line ${helper.line.no}) calls <code>${esc(helper.name)}()</code>, which costs O(${fmt(helper.cost)}).` };
+
+  let rule, text;
+  if (lg.length && !lin.length) {
+    rule = 'Rule 3 · Halving / doubling';
+    text = lg.length === 1
+      ? `The loop on line ${lg[0].line.no} (${snip(lg[0].line.text)}) runs only about log₂ n times, because ${lg[0].why}.`
+      : `${lg.length} halving/doubling loops are nested (lines ${lineList(lg)}), and each one runs log n times.`;
+  } else if (lin.length === 1 && !lg.length) {
+    rule = 'Rule 1 · Single loop';
+    text = `One loop runs over the input (line ${lin[0].line.no}: ${snip(lin[0].line.text)}) with no loop over n inside it, so its body runs about n times.`;
+  } else if (!lg.length) {
+    rule = 'Rule 2 · Nested loops';
+    text = `${lin.length} loops over n are nested (lines ${lineList(lin)}), so the innermost statement runs ${lin.map(() => 'n').join(' × ')} = n<sup>${lin.length}</sup> times.`;
+  } else {
+    rule = 'Rules 1–3 combined';
+    text = `${lin.length} loop${lin.length > 1 ? 's' : ''} over n and ${lg.length} halving/doubling loop${lg.length > 1 ? 's' : ''} are nested (lines ${lineList(chain)}). Multiply the costs: n per linear loop and log n per halving loop.`;
+  }
+  if (helper) text += ` Inside the loop, line ${helper.line.no} calls <code>${esc(helper.name)}()</code> (O(${fmt(helper.cost)})), which is multiplied in too.`;
+  return { rule, text };
+}
+
+function analyze(src) {
+  const lines = preprocess(src);
+  if (!lines.length) return null;
+  const fns = splitFunctions(lines);
+  const ctx = { fns };
+  const results = fns.map(f => analyzeFn(f, ctx));
+  // The dominant function decides the answer. On a tie, prefer the one doing the work itself over one that only calls it.
+  const onlyCalls = r => r.kind === 'loops' && !!r.scan.best.helper && !r.scan.best.chain.some(c => c.kind !== 'const');
+  results.sort((x, y) => (rank(y.cost) - rank(x.cost)) || (onlyCalls(x) - onlyCalls(y)));
+  return { top: results[0], all: results };
+}
+
+/* ---------- Render ---------- */
+function showEmpty(message) {
+  const el = document.getElementById('result');
+  el.className = 'result empty';
+  setScale(null);
+  el.innerHTML = `<div class="empty-ico"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg></div><p>${message}</p>`;
+}
+// The ladder of complexity classes shown under the result; the detected class gets highlighted
+const SCALE = [
+  ['O(1)', 'Constant', 'Array access'],
+  ['O(log n)', 'Logarithmic', 'Binary search'],
+  ['O(n)', 'Linear', 'Linear search'],
+  ['O(n log n)', 'Linearithmic', 'Merge sort'],
+  ['O(n²)', 'Quadratic', 'Bubble sort'],
+  ['O(n³)', 'Cubic', 'Matrix multiply'],
+  ['O(2ⁿ)', 'Exponential', 'Fibonacci, subsets'],
+  ['O(n!)', 'Factorial', 'Permutations'],
+];
+document.getElementById('scale').innerHTML = SCALE.map(([o, name, ex]) =>
+  `<li data-cat="${name}"><code>${o}</code><span class="nm">${name}</span><span class="ex">${ex}</span></li>`).join('');
+function setScale(cat) {
+  document.querySelectorAll('#scale li').forEach(li => li.classList.toggle('on', li.dataset.cat === cat));
+}
+const EMPTY_MSG = 'Analyze some pseudocode to see its time complexity';
+
+function render(result) {
+  const el = document.getElementById('result');
+  if (!result) { showEmpty('Nothing to analyze. Type pseudocode or pick an example.'); return; }
+  const { top, all } = result;
+  const ex = explain(top);
+  const evidence = [];
+  all.forEach(r => {
+    evidence.push(`${fnLabel(r.fn)}${r.fn.header ? ` (line ${r.fn.header.no})` : ''}: O(${fmt(r.cost)})`);
+    r.scan.loops.forEach(c => evidence.push(`&nbsp;&nbsp;Line ${c.line.no} ${snip(c.line.text)}: ${c.kind === 'log' ? 'halving/doubling loop, × log n' : c.kind === 'const' ? 'fixed-bound loop, × 1' : 'loop over n, × n'}`));
+    if (r.scan.selfCalls.length) {
+      const n = r.scan.selfCalls.reduce((s, c) => s + c.count, 0);
+      evidence.push(`&nbsp;&nbsp;${n} recursive call${n > 1 ? 's' : ''}${r.a !== undefined && r.a !== n ? ` (only ${r.a} can run per call: they're in separate branches)` : ''}: ${r.scan.selfCalls.flatMap(c => c.args).map(a => snip(a.trim())).join(', ')}`);
+    }
+  });
+  const cat = category(top.cost);
+  setScale(cat);
+  el.className = 'result fade-in';
+  el.innerHTML = `
+    <div class="result-top"><span class="badge">${cat}</span></div>
+    <div class="bigo">O(${fmt(top.cost)})</div>
+    <div class="bigo-sub">${all.length > 1 ? `Decided by ${fnLabel(top.fn)}, the most expensive of ${all.length} blocks` : 'Estimated worst-case time'}${top.kind === 'pivot' ? ' · average case' : ''}</div>
+    <div class="rule-tag">${ex.rule}</div>
+    <p class="why">${ex.text}</p>
+    ${ex.recurrence ? `<div class="recurrence">${ex.recurrence}</div>` : ''}
+    ${ex.note ? `<p class="note">${ex.note}</p>` : ''}
+    <details class="evidence"><summary>What the analyzer detected</summary><ul>${evidence.map(e => `<li>${e}</li>`).join('')}</ul></details>`;
+}
+
+/* ---------- Wire up the analyzer UI ---------- */
+const codeEl = document.getElementById('code');
+const presetsEl = document.getElementById('presets');
+const gutterEl = document.getElementById('gutter'), lineCountEl = document.getElementById('lineCount');
+
+// Line numbers beside the textarea: one number per line, scrolled together with the text
+function updateGutter() {
+  const lines = codeEl.value ? codeEl.value.split('\n').length : 0;
+  gutterEl.textContent = Array.from({ length: Math.max(lines, 1) }, (_, i) => i + 1).join('\n');
+  lineCountEl.textContent = `${lines} line${lines === 1 ? '' : 's'}`;
+  gutterEl.scrollTop = codeEl.scrollTop;
+}
+codeEl.addEventListener('scroll', () => { gutterEl.scrollTop = codeEl.scrollTop; });
+
+const PRESET_TAGS = {
+  'Linear search': 'O(n)', 'Binary search': 'O(log n)', 'Merge sort': 'O(n log n)', 'Quick sort': 'O(n log n)',
+  'Bubble sort': 'O(n²)', 'Fibonacci (recursive)': 'O(2ⁿ)', 'Sum of subsets': 'O(2ⁿ)'
+};
+Object.keys(PRESETS).forEach(name => {
+  const b = document.createElement('button');
+  b.className = 'chip';
+  b.innerHTML = `<span>${name}</span><em>${PRESET_TAGS[name] || ''}</em>`;
+  b.addEventListener('click', () => {
+    codeEl.value = PRESETS[name];
+    codeEl.scrollTop = 0;
+    updateGutter();
+    presetsEl.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c === b));
+    render(analyze(codeEl.value));
+  });
+  presetsEl.appendChild(b);
+});
+document.getElementById('analyzeBtn').addEventListener('click', () => render(analyze(codeEl.value)));
+document.getElementById('clearBtn').addEventListener('click', () => {
+  codeEl.value = '';
+  updateGutter();
+  presetsEl.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  showEmpty(EMPTY_MSG);
+  codeEl.focus();
+});
+showEmpty(EMPTY_MSG);
+updateGutter();
+codeEl.addEventListener('input', () => {
+  updateGutter();
+  presetsEl.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+});
+codeEl.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); render(analyze(codeEl.value)); }
+  if (e.key === 'Tab' && !e.shiftKey) {
+    e.preventDefault();
+    const s = codeEl.selectionStart;
+    codeEl.setRangeText('    ', s, codeEl.selectionEnd, 'end');
+    updateGutter();
+  }
+});
+
+/* =====================================================================
+   2. PERFORMANCE TEST: real algorithms timed with performance.now()
+   ===================================================================== */
+function linearSearch(a, key) { for (let i = 0; i < a.length; i++) if (a[i] === key) return i; return -1; }
+function binarySearch(a, key) {
+  let lo = 0, hi = a.length - 1;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (a[mid] === key) return mid;
+    if (a[mid] < key) lo = mid + 1; else hi = mid - 1;
+  }
+  return -1;
+}
+function bubbleSort(a) {
+  const n = a.length;
+  for (let i = 0; i < n - 1; i++) {
+    let swapped = false;
+    for (let j = 0; j < n - 1 - i; j++) {
+      if (a[j] > a[j + 1]) { const t = a[j]; a[j] = a[j + 1]; a[j + 1] = t; swapped = true; }
+    }
+    if (!swapped) break;
+  }
+  return a;
+}
+function mergeSort(a) {
+  if (a.length < 2) return a;
+  const m = a.length >> 1;
+  return merge(mergeSort(a.slice(0, m)), mergeSort(a.slice(m)));
+}
+function merge(l, r) {
+  const out = new Array(l.length + r.length);
+  let i = 0, j = 0, k = 0;
+  while (i < l.length && j < r.length) out[k++] = l[i] <= r[j] ? l[i++] : r[j++];
+  while (i < l.length) out[k++] = l[i++];
+  while (j < r.length) out[k++] = r[j++];
+  return out;
+}
+
+const randArray = n => Array.from({ length: n }, () => (Math.random() * 1e6) | 0);
+let sink = 0;   // results are accumulated here so the JS engine can't skip the work as "unused"
+
+/* Run `batch` several times and keep the FASTEST result. Garbage collection and other
+   background work only ever make a run slower, so the minimum is the most stable estimate. */
+function bestOf(batches, batch) {
+  let best = Infinity;
+  for (let b = 0; b < batches; b++) best = Math.min(best, batch());
+  return best;
+}
+
+/* Each run(n) returns milliseconds for ONE operation of size n.
+   A single search takes microseconds, which is below the timer's resolution,
+   so searches are repeated many times per batch and the total is divided. */
+const PERF_ALGOS = [
+  { id: 'linear', name: 'Linear search', big: 'O(n)', run(n) {
+      const a = randArray(n), reps = Math.max(50, Math.ceil(3e6 / n));
+      return bestOf(5, () => {
+        const t0 = performance.now();
+        for (let r = 0; r < reps; r++) sink += linearSearch(a, -1);     // -1 is never present: worst case
+        return (performance.now() - t0) / reps;
+      });
+  } },
+  { id: 'binary', name: 'Binary search', big: 'O(log n)', run(n) {
+      const a = Array.from({ length: n }, (_, i) => i * 2);             // sorted, even numbers only
+      const keys = Array.from({ length: 1024 }, () => ((Math.random() * n) | 0) * 2 + 1); // odd keys: never found
+      const reps = 200000;
+      return bestOf(5, () => {
+        const t0 = performance.now();
+        for (let r = 0; r < reps; r++) sink += binarySearch(a, keys[r & 1023]);
+        return (performance.now() - t0) / reps;
+      });
+  } },
+  { id: 'bubble', name: 'Bubble sort', big: 'O(n²)', run(n) {
+      const base = randArray(n);
+      return bestOf(n <= 5000 ? 3 : 2, () => {
+        const c = base.slice();                                          // sort a fresh copy each time
+        const t0 = performance.now(); bubbleSort(c); const dt = performance.now() - t0;
+        sink += c[0];
+        return dt;
+      });
+  } },
+  { id: 'merge', name: 'Merge sort', big: 'O(n log n)', run(n) {
+      const base = randArray(n);
+      return bestOf(n <= 5000 ? 15 : 8, () => {
+        const c = base.slice();
+        const t0 = performance.now(); sink += mergeSort(c)[0];
+        return performance.now() - t0;
+      });
+  } },
+];
+
+function fmtTime(ms) {
+  if (ms === null || ms === undefined) return '–';
+  if (ms < 0.001) return (ms * 1e6).toFixed(0) + ' ns';
+  if (ms < 1) return (ms * 1000).toFixed(ms < 0.01 ? 2 : 1) + ' µs';
+  return ms.toFixed(ms < 10 ? 2 : 1) + ' ms';
+}
+
+const perfBtn = document.getElementById('perfBtn'), perfStatus = document.getElementById('perfStatus'),
+      perfBar = document.getElementById('perfBar');
+
+// Theoretical growth factor between the smallest (a) and largest (b) input size
+const EXPECTED = {
+  linear: (a, b) => b / a,
+  binary: (a, b) => Math.log2(b) / Math.log2(a),
+  bubble: (a, b) => (b / a) ** 2,
+  merge:  (a, b) => (b * Math.log2(b)) / (a * Math.log2(a)),
+};
+
+function perfTable(sizes, results, finished) {
+  const t = document.getElementById('perfTable');
+  t.querySelector('thead').innerHTML = `<tr><th>n</th>${PERF_ALGOS.map(a => `<th>${a.name} <span style="color:var(--faint)">${a.big}</span></th>`).join('')}</tr>`;
+  t.querySelector('tbody').innerHTML = sizes.length
+    ? sizes.map((n, r) => `<tr><td>${n.toLocaleString()}</td>${PERF_ALGOS.map(a => `<td>${fmtTime(results[a.id][r])}</td>`).join('')}</tr>`).join('')
+    : `<tr><td class="placeholder" colspan="${PERF_ALGOS.length + 1}">Press <b>Run test</b> to fill in the timings</td></tr>`;
+  let foot = t.querySelector('tfoot');
+  if (!foot) foot = t.appendChild(document.createElement('tfoot'));
+  // Summary row: how much slower each algorithm got when n doubled (middle size → largest), next to what theory predicts.
+  // The smallest sizes are too fast to time reliably, so they're not used here.
+  const mid = sizes.length / 2 - 1, last = sizes.length - 1;
+  foot.innerHTML = finished
+    ? `<tr><td>When n doubles</td>${PERF_ALGOS.map(a => {
+        const r = results[a.id], got = r[last] / r[mid], exp = EXPECTED[a.id](sizes[mid], sizes[last]);
+        return `<td>${got.toFixed(1)}× <span>(theory ${exp.toFixed(1)}×)</span></td>`;
+      }).join('')}</tr>`
+    : '';
+}
+
+const nextFrame = () => new Promise(r => setTimeout(r, 0));   // let the page repaint between measurements
+
+async function runPerf() {
+  perfBtn.disabled = true;
+  perfBtn.textContent = 'Running…';
+  const maxN = +document.getElementById('perfMax').value, steps = 8;
+  const sizes = Array.from({ length: steps }, (_, i) => Math.round(maxN * (i + 1) / steps));
+  const results = Object.fromEntries(PERF_ALGOS.map(a => [a.id, []]));
+
+  // Warm-up so the JIT compiler has optimised each function before we measure
+  perfStatus.textContent = 'Warming up the JavaScript engine…';
+  await nextFrame();
+  PERF_ALGOS.forEach(a => { a.run(300); a.run(1000); });
+
+  const total = sizes.length * PERF_ALGOS.length;
+  let done = 0;
+  for (let r = 0; r < sizes.length; r++) {
+    for (let i = 0; i < PERF_ALGOS.length; i++) {
+      const a = PERF_ALGOS[i], n = sizes[r];
+      perfStatus.textContent = `Running ${a.name.toLowerCase()} on n = ${n.toLocaleString()}…`;
+      await nextFrame();
+      const ms = a.run(n);
+      results[a.id][r] = ms;
+      perfBar.style.width = (++done / total * 100) + '%';
+    }
+    perfTable(sizes.slice(0, r + 1), results);
+  }
+  perfTable(sizes, results, true);
+  perfStatus.innerHTML = `Done. The last row compares n = ${sizes[steps / 2 - 1].toLocaleString()} with n = ${maxN.toLocaleString()} against what theory predicts. Timings vary with your CPU and browser.`;
+  perfBtn.disabled = false;
+  perfBtn.textContent = 'Run again';
+}
+perfBtn.addEventListener('click', runPerf);
+perfTable([], {});
+</script>
+</body>
+</html>
